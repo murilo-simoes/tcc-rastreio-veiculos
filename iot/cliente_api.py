@@ -24,7 +24,12 @@ def enviar_deteccao(placa: str, confianca_ocr: float,
     req = urllib.request.Request(
         f"{API_URL}/deteccoes",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            # User-Agent identificado: proxies (ex.: Cloudflare) costumam
+            # bloquear o User-Agent padrao do Python como bot
+            "User-Agent": "RastreioVeiculos-IoT/1.0",
+        },
         method="POST",
     )
     try:
