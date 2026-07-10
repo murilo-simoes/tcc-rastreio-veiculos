@@ -34,5 +34,15 @@ services:
     ports:
       - "127.0.0.1:8090:8000"
 
+  # App web (build do Flutter já compilado apontando para a API pública)
+  web:
+    image: nginx:alpine
+    container_name: rastreio_web
+    restart: unless-stopped
+    volumes:
+      - ./webapp:/usr/share/nginx/html:ro
+    ports:
+      - "127.0.0.1:8091:80"
+
 volumes:
   rastreio_pgdata:
