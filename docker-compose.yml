@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: tcc_postgres
+    environment:
+      POSTGRES_USER: tcc_admin
+      POSTGRES_PASSWORD: tcc_senha_dev
+      POSTGRES_DB: rastreio_veiculos
+    ports:
+      - "5433:5432"  # porta 5433 no host: a 5432 já é usada por um PostgreSQL local
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcc_admin -d rastreio_veiculos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

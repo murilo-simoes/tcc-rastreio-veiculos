@@ -1,0 +1,38 @@
+# Deploy de produção no servidor local (atrás do Cloudflare Tunnel).
+# Uso: docker compose -f docker-compose.prod.yml up -d --build
+#
+# A API fica exposta APENAS em 127.0.0.1:8090 — quem publica para a
+# internet (com HTTPS) é o cloudflared, via subdomínio.
+services:
+  db:
+    image: postgres:16
+    container_name: rastreio_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tcc_admin
+      POSTGRES_PASSWORD: ${DB_SENHA:?defina DB_SENHA no arquivo .env}
+      POSTGRES_DB: rastreio_veiculos
+    volumes:
+      - rastreio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcc_admin -d rastreio_veiculos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: rastreio_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://tcc_admin:${DB_SENHA}@db:5432/rastreio_veiculos
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      ADMIN_SENHA: ${ADMIN_SENHA:-admin123}
+    ports:
+      - "127.0.0.1:8090:8000"
+
+volumes:
+  rastreio_pgdata:

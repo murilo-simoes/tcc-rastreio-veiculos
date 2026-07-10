@@ -1,0 +1,21 @@
+# Blueprint do Render — cria a API e o banco com um clique
+# (Dashboard -> New -> Blueprint, apontando para este repositório)
+services:
+  - type: web
+    name: rastreio-veiculos-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rastreio-veiculos-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: rastreio-veiculos-db
+    plan: free
+    databaseName: rastreio_veiculos
+    user: tcc_admin
