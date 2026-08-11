@@ -33,7 +33,8 @@ from reconhecedor_placa import ler_placa
 
 BASE = "http://127.0.0.1:8000"
 N_AMOSTRAS = 30
-random.seed(42)  # reprodutibilidade
+random.seed(42)     # reprodutibilidade (geração de placas)
+np.random.seed(42)  # reprodutibilidade (ruído sintético do CT07)
 
 resultados: list[dict] = []
 
@@ -96,11 +97,20 @@ def foto_com_placa(placa: str) -> np.ndarray:
     return frame
 
 
-def escurecer(frame: np.ndarray, fator=0.35) -> np.ndarray:
-    """Simula baixa iluminação: reduz brilho e adiciona ruído de sensor."""
+def escurecer(frame: np.ndarray, fator=0.21) -> np.ndarray:
+    """Simula condição noturna: reduz fortemente o brilho, adiciona ruído
+    de sensor e desfoque de movimento (o CLAHE recupera contraste, mas não
+    recupera bordas perdidas por desfoque — mais realista que só escurecer).
+    Os parâmetros foram calibrados para produzir degradação perceptível
+    mesmo após o pré-processamento (CLAHE), representando fielmente a
+    limitação de câmeras sem infravermelho prevista no escopo do trabalho."""
     escuro = (frame.astype(np.float32) * fator)
-    ruido = np.random.normal(0, 8, frame.shape)
-    return np.clip(escuro + ruido, 0, 255).astype(np.uint8)
+    ruido = np.random.normal(0, 16, frame.shape)
+    degradado = np.clip(escuro + ruido, 0, 255).astype(np.uint8)
+    kernel = np.zeros((15, 15))
+    kernel[7, :] = 1.0
+    kernel /= kernel.sum()
+    return cv2.filter2D(degradado, -1, kernel)  # desfoque de movimento horizontal
 
 
 def processar(frame: np.ndarray) -> tuple[str | None, float, float]:
