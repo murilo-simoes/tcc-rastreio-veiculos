@@ -19,7 +19,9 @@ sistema/
 │       ├── schemas.py          # validação Pydantic
 │       ├── auth.py             # JWT + bcrypt
 │       ├── rotas_probabilisticas.py  # Cadeia de Markov (RF07)
-│       └── routers/            # endpoints REST
+│       ├── predicao.py         # Filtro de Kalman + KDE
+│       ├── lgpd.py             # retenção/expurgo de imagens (RNF08)
+│       └── routers/            # endpoints REST (inclui privacidade.py)
 └── iot/                        # módulo do Raspberry Pi (roda também no PC)
     ├── requirements.txt
     ├── config.py               # câmera, API, limiares de confiança
@@ -66,6 +68,22 @@ Documentação interativa (Swagger): http://127.0.0.1:8000/docs
 | GET | /alertas | Lista alertas gerados |
 | POST | /rotas/{id_veiculo}/gerar | Gera rota probabilística (mín. 2 avistamentos) |
 | GET | /rotas/{id_veiculo} | Última rota gerada do veículo |
+| GET | /privacidade | Aviso de privacidade (LGPD) — finalidade, base legal, retenção |
+| POST | /privacidade/retencao/executar | Expurga imagens expiradas agora (admin) |
+
+## Conformidade com a LGPD (RNF08)
+
+As imagens capturadas nos avistamentos são mantidas por um prazo de
+retenção configurável (`RETENCAO_IMAGENS_DIAS`, padrão 90 dias) e removidas
+automaticamente após esse período — a API roda o expurgo uma vez por dia e
+o dispositivo IoT tem seu próprio script (`iot/limpar_capturas.py`) para
+limpar o disco local, já que as imagens vivem no dispositivo de borda, não
+no servidor. Os metadados do avistamento (placa, câmera, data/hora,
+confiança) são preservados, pois sustentam o histórico de rotas e a
+finalidade de segurança pública do tratamento — apenas a referência à
+imagem é removida. O endpoint `GET /privacidade` documenta finalidade,
+base legal, dados coletados e direitos do titular, atendendo ao princípio
+de transparência da lei.
 
 ## Requisitos do TCC cobertos
 

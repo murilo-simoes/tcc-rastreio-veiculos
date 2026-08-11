@@ -155,7 +155,10 @@ registrar("RNF01", "Tempo de processamento por imagem",
           "aprovado" if tempo_medio <= 3 else "reprovado")
 
 # ── CT05 – Cadastro de veículo furtado ───────────────────────────────────────
-PLACA_CT = placas_teste[0]
+# Placa com sufixo do horário: garante que o teste seja reexecutável sem
+# colidir com cadastros de execuções anteriores (a lista de amostras do
+# CT01/CT07 usa semente fixa e não é registrada no banco, só o CT05 é).
+PLACA_CT = placas_teste[0][:5] + f"{int(time.time()) % 100:02d}"
 status_http, veic = api("POST", "/veiculos-furtados", {
     "placa": PLACA_CT, "marca": "Teste", "modelo": "CT05", "cor": "Azul",
     "ano": 2020, "data_furto": str(datetime.now().date()),

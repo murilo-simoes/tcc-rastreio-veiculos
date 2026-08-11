@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
@@ -7,7 +8,20 @@ from sqlalchemy import select
 
 from app import models
 from app.database import Base, SessionLocal, engine
-from app.routers import alertas, auth_router, avistamentos, cameras, rotas, veiculos
+from app.lgpd import purgar_imagens_expiradas
+from app.routers import (
+    alertas, auth_router, avistamentos, cameras, privacidade, rotas, veiculos,
+)
+
+SEGUNDOS_UM_DIA = 24 * 60 * 60
+
+
+async def _rotina_retencao_diaria():
+    """Expurga imagens expiradas uma vez por dia (LGPD — RNF08)."""
+    while True:
+        await asyncio.sleep(SEGUNDOS_UM_DIA)
+        with SessionLocal() as db:
+            purgar_imagens_expiradas(db)
 
 
 @asynccontextmanager
@@ -39,7 +53,11 @@ async def lifespan(_app: FastAPI):
                               endereco="Marginal Tietê, km 18 - Casa Verde, São Paulo"),
             ])
             db.commit()
+        purgar_imagens_expiradas(db)  # expurgo inicial, antes de esperar 24h
+
+    tarefa_retencao = asyncio.create_task(_rotina_retencao_diaria())
     yield
+    tarefa_retencao.cancel()
 
 
 app = FastAPI(
@@ -65,6 +83,7 @@ app.include_router(cameras.router)
 app.include_router(avistamentos.router)
 app.include_router(alertas.router)
 app.include_router(rotas.router)
+app.include_router(privacidade.router)
 
 
 @app.get("/", tags=["Status"])
