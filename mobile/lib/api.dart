@@ -16,7 +16,9 @@ class ApiClient {
       String.fromEnvironment('API_URL', defaultValue: 'http://127.0.0.1:8000');
 
   String? _token;
+  String? _perfil;
   bool get autenticado => _token != null;
+  bool get isAdmin => _perfil == 'administrador';
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -33,9 +35,52 @@ class ApiClient {
       throw ApiException('E-mail ou senha inválidos');
     }
     _token = jsonDecode(utf8.decode(resp.bodyBytes))['access_token'];
+
+    final perfilResp =
+        await http.get(Uri.parse('$baseUrl/auth/me'), headers: _headers);
+    if (perfilResp.statusCode == 200) {
+      _perfil = jsonDecode(utf8.decode(perfilResp.bodyBytes))['perfil'];
+    }
   }
 
-  void logout() => _token = null;
+  void logout() {
+    _token = null;
+    _perfil = null;
+  }
+
+  Future<Veiculo> cadastrarVeiculo({
+    required String placa,
+    required String marca,
+    required String modelo,
+    required String cor,
+    required int ano,
+    required DateTime dataFurto,
+    required String boletim,
+  }) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/veiculos-furtados'),
+      headers: _headers,
+      body: jsonEncode({
+        'placa': placa.toUpperCase(),
+        'marca': marca,
+        'modelo': modelo,
+        'cor': cor,
+        'ano': ano,
+        'data_furto': dataFurto.toIso8601String().split('T').first,
+        'num_boletim_ocorrencia': boletim,
+      }),
+    );
+    if (resp.statusCode == 201) {
+      return Veiculo.fromJson(jsonDecode(utf8.decode(resp.bodyBytes)));
+    }
+    if (resp.statusCode == 409) {
+      throw ApiException('Essa placa já está cadastrada');
+    }
+    if (resp.statusCode == 403) {
+      throw ApiException('Apenas administradores podem cadastrar veículos');
+    }
+    throw ApiException('Erro ${resp.statusCode} ao cadastrar veículo');
+  }
 
   Future<List<dynamic>> _getLista(String caminho) async {
     final resp =
