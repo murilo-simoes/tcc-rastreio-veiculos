@@ -87,7 +87,11 @@ def main():
                 if not ok:
                     print(f"[aviso] falha ao ler frame da camera {id_camera}")
                     continue
-                processar_frame(frame, id_camera)
+                inicio = time.time()
+                respostas = processar_frame(frame, id_camera)
+                if not respostas:
+                    print(f"[camera {id_camera}] nenhum veiculo/placa "
+                          f"detectado ({time.time() - inicio:.1f}s)")
                 time.sleep(INTERVALO_PROCESSAMENTO)
     except KeyboardInterrupt:
         print("\nEncerrado pelo operador")
