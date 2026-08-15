@@ -21,6 +21,7 @@ import time
 
 import cv2
 
+from camera import abrir_camera
 from cliente_api import enviar_deteccao
 from config import CONFIANCA_MIN_OCR, INTERVALO_PROCESSAMENTO, PASTA_CAPTURAS
 from detector_veiculo import detectar_veiculos
@@ -69,7 +70,7 @@ def main():
     cameras = _parse_cameras()
     capturas = []
     for fonte, id_camera in cameras:
-        captura = cv2.VideoCapture(fonte)
+        captura = abrir_camera(fonte)
         if not captura.isOpened():
             print(f"[aviso] nao foi possivel abrir a camera {id_camera} (fonte {fonte})")
             continue

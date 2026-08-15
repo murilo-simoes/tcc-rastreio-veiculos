@@ -16,6 +16,7 @@ import time
 
 import cv2
 
+from camera import abrir_camera
 from cliente_api import enviar_deteccao
 from config import CONFIANCA_MIN_OCR, FONTE_VIDEO, INTERVALO_PROCESSAMENTO, PASTA_CAPTURAS
 from detector_veiculo import detectar_veiculos
@@ -63,7 +64,10 @@ def main():
         return
 
     # Webcam ou vídeo
-    captura = cv2.VideoCapture(int(fonte) if str(fonte).isdigit() else fonte)
+    if str(fonte).isdigit():
+        captura = abrir_camera(int(fonte))
+    else:
+        captura = cv2.VideoCapture(fonte)
     if not captura.isOpened():
         sys.exit(f"Nao foi possivel abrir a fonte de video: {fonte}")
 
