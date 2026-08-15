@@ -8,15 +8,20 @@ from config import API_URL, ID_CAMERA
 
 
 def enviar_deteccao(placa: str, confianca_ocr: float,
-                    caminho_imagem: str | None = None) -> dict:
+                    caminho_imagem: str | None = None,
+                    id_camera: int | None = None) -> dict:
     """Envia a placa lida para POST /deteccoes.
+
+    `id_camera` permite sobrescrever a câmera configurada globalmente —
+    usado quando um único processo atende a mais de uma câmera (ver
+    main_multicamera.py). Se omitido, usa a câmera fixa do processo.
 
     Retorna a resposta da API. Em caso de falha de rede, devolve um dict
     de erro sem lançar exceção — o dispositivo deve continuar operando.
     """
     payload = {
         "placa": placa,
-        "id_camera": ID_CAMERA,
+        "id_camera": id_camera if id_camera is not None else ID_CAMERA,
         "confianca_leitura": round(confianca_ocr * 100, 2),
         "imagem_captura": caminho_imagem,
         "data_hora": datetime.now().isoformat(),

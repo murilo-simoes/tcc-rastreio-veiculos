@@ -107,6 +107,21 @@ py main.py foto.jpg         # processar uma imagem
 No Raspberry Pi, basta copiar a pasta `iot/`, instalar as dependências e
 definir as variáveis `API_URL` e `ID_CAMERA` (uma por dispositivo).
 
+### Múltiplas câmeras em um único Raspberry Pi
+
+Um Pi 4 não processa OCR de várias câmeras em paralelo sem degradar o
+desempenho de todas (testado no hardware físico: ~5,5s por frame com uma
+câmera; três processos simultâneos disputariam os mesmos núcleos). Para
+esse cenário, `main_multicamera.py` carrega os modelos uma única vez e
+revezua entre as câmeras configuradas:
+
+```bash
+CAMERAS="0:1,2:2,4:3" python3 main_multicamera.py
+```
+
+(pares `fonte_video:id_camera`, separados por vírgula — os índices são os
+mostrados por `v4l2-ctl --list-devices`)
+
 ## Próximas fases
 
 1. **Fase 5 — App Flutter**: login, lista de veículos, mapa com rota, push notifications
