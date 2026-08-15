@@ -1,0 +1,17 @@
+[Unit]
+Description=Rastreio de Veiculos - IoT (deteccao de placas via camera)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=murilo
+WorkingDirectory=/home/murilo/tcc-rastreio-veiculos/sistema/iot
+Environment=API_URL=https://rastreio-api.murilosimoes.com.br
+Environment=CAMERAS=0:1,2:2,4:3
+ExecStart=/home/murilo/tcc-rastreio-veiculos/sistema/iot/.venv/bin/python3 main_multicamera.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

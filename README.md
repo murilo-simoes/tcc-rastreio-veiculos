@@ -122,6 +122,32 @@ CAMERAS="0:1,2:2,4:3" python3 main_multicamera.py
 (pares `fonte_video:id_camera`, separados por vírgula — os índices são os
 mostrados por `v4l2-ctl --list-devices`)
 
+### Rodar sempre ao ligar o Raspberry Pi (systemd)
+
+`rastreio-iot.service` inicia o monitoramento automaticamente no boot e
+reinicia sozinho se o processo cair. Ajuste `User`, `WorkingDirectory` e
+`CAMERAS` no arquivo antes de instalar, se o caminho ou os índices das
+câmeras forem diferentes:
+
+```bash
+sudo cp rastreio-iot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rastreio-iot.service
+
+# ver status / logs
+sudo systemctl status rastreio-iot.service
+journalctl -u rastreio-iot.service -f
+```
+
+Para a limpeza periódica de imagens (LGPD, RNF08), agende
+`limpar_capturas.py` via cron:
+
+```bash
+crontab -e
+# adicionar a linha (roda todo dia as 3h da manha):
+0 3 * * * /home/murilo/tcc-rastreio-veiculos/sistema/iot/.venv/bin/python3 /home/murilo/tcc-rastreio-veiculos/sistema/iot/limpar_capturas.py
+```
+
 ## Próximas fases
 
 1. **Fase 5 — App Flutter**: login, lista de veículos, mapa com rota, push notifications
