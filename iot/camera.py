@@ -13,8 +13,8 @@ def abrir_camera(fonte: int) -> cv2.VideoCapture:
     """
     captura = cv2.VideoCapture(fonte)
     captura.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    captura.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    captura.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    captura.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    captura.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
     # Os primeiros frames apos abrir a camera costumam vir com exposicao/
     # balanco de branco ainda nao estabilizados (a camera esta se ajustando
