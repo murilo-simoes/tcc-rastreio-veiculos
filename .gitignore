@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Flutter / Android
+mobile/build/
+mobile/.dart_tool/
+mobile/.gradle/
+mobile/android/.gradle/
+mobile/android/local.properties
+
+# Artefatos de execução
+iot/capturas/
+iot/*.jpg
+iot/yolov8n.pt
+testes/yolov8n.pt
+
+# Segredos locais (nunca versionar)
+.env
+*.local.env
