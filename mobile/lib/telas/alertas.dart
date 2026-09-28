@@ -122,7 +122,9 @@ class _TelaAlertasState extends State<TelaAlertas> {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(carro.placa,
+                  Text(
+                      carro?.placa ??
+                          'Veículo #${alerta.avistamento.idVeiculo}',
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -140,23 +142,26 @@ class _TelaAlertasState extends State<TelaAlertas> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(carro.descricao,
+              Text(carro?.descricao ?? 'Dados do veículo indisponíveis',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 20,
                 runSpacing: 10,
                 children: [
-                  _info(Icons.videocam_outlined, camera.descricao),
+                  _info(
+                      Icons.videocam_outlined,
+                      camera?.descricao ??
+                          'Câmera ${alerta.avistamento.idCamera}'),
                   _info(
                       Icons.schedule, _fmt.format(alerta.avistamento.dataHora)),
                   _info(Icons.fact_check_outlined,
                       'Leitura ${alerta.avistamento.confianca.toStringAsFixed(0)}%'),
                 ],
               ),
-              if (camera.endereco != null && camera.endereco!.isNotEmpty) ...[
+              if (camera?.endereco?.isNotEmpty == true) ...[
                 const SizedBox(height: 8),
-                _info(Icons.location_on_outlined, camera.endereco!),
+                _info(Icons.location_on_outlined, camera!.endereco!),
               ],
               const Divider(height: 28),
               Wrap(
@@ -165,11 +170,14 @@ class _TelaAlertasState extends State<TelaAlertas> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => TelaDetalheVeiculo(veiculo: carro),
-                      ),
-                    ),
+                    onPressed: carro == null
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    TelaDetalheVeiculo(veiculo: carro),
+                              ),
+                            ),
                     icon: const Icon(Icons.open_in_new, size: 18),
                     label: const Text('Ver veículo'),
                   ),

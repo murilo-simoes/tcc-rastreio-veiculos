@@ -91,6 +91,21 @@ curl -s https://rastreio.murilosimoes.com.br/ | head -c 100
 
 Copie o valor de `IOT_DEVICE_KEY` do `.env` do servidor para um arquivo protegido em cada Raspberry Pi, por exemplo `/etc/rastreio-iot.env`, com a linha `IOT_DEVICE_KEY=<mesma chave>`. Restrinja a leitura ao usuário do serviço e reinicie `rastreio-iot.service`. O arquivo de serviço versionado carrega esse caminho por `EnvironmentFile`. Não inclua a chave em código, capturas de tela ou no TCC. Ao trocar a chave, atualize a API e os dispositivos juntos.
 
+### Atualizar uma instalação existente
+
+A chave não vem de um serviço externo: gere-a uma vez no servidor e use o mesmo
+valor no Raspberry Pi. Se o `.env` já existe, acrescente somente a variável
+ausente, preservando as senhas atuais:
+
+```bash
+grep -q '^IOT_DEVICE_KEY=' .env || printf 'IOT_DEVICE_KEY=%s\n' "$(openssl rand -hex 32)" >> .env
+chmod 600 .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+O nome da variável é `IOT_DEVICE_KEY`; cada detecção enviada pelo dispositivo
+inclui seu valor no cabeçalho `X-Device-Key`. O servidor recusa detecções
+quando a variável não está configurada.
 ## Manutenção
 
 ```bash

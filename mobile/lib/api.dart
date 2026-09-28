@@ -9,14 +9,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  ApiClient._();
-  static final ApiClient instance = ApiClient._();
+  ApiClient({http.Client? client}) : _client = client ?? http.Client();
+  static final ApiClient instance = ApiClient();
+
+  final http.Client _client;
 
   static const String baseUrl =
       String.fromEnvironment('API_URL', defaultValue: 'http://127.0.0.1:8000');
 
   String? _token;
   String? _perfil;
+  final _veiculosPorId = <int, Veiculo>{};
+  final _camerasPorId = <int, CameraInfo>{};
+  DateTime? _veiculosCarregadosEm;
+  DateTime? _camerasCarregadasEm;
+
+  bool _cacheAtual(DateTime? instante) =>
+      instante != null &&
+      DateTime.now().difference(instante) < const Duration(minutes: 1);
   bool get autenticado => _token != null;
   bool get isAdmin => _perfil == 'administrador';
 
@@ -26,7 +36,7 @@ class ApiClient {
       };
 
   Future<void> login(String email, String senha) async {
-    final resp = await http.post(
+    final resp = await _client.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: _headers,
       body: jsonEncode({'email': email, 'senha': senha}),
@@ -37,7 +47,7 @@ class ApiClient {
     _token = jsonDecode(utf8.decode(resp.bodyBytes))['access_token'];
 
     final perfilResp =
-        await http.get(Uri.parse('$baseUrl/auth/me'), headers: _headers);
+        await _client.get(Uri.parse('$baseUrl/auth/me'), headers: _headers);
     if (perfilResp.statusCode == 200) {
       _perfil = jsonDecode(utf8.decode(perfilResp.bodyBytes))['perfil'];
     }
@@ -46,6 +56,10 @@ class ApiClient {
   void logout() {
     _token = null;
     _perfil = null;
+    _veiculosPorId.clear();
+    _camerasPorId.clear();
+    _veiculosCarregadosEm = null;
+    _camerasCarregadasEm = null;
   }
 
   Future<Veiculo> cadastrarVeiculo({
@@ -57,7 +71,7 @@ class ApiClient {
     required DateTime dataFurto,
     required String boletim,
   }) async {
-    final resp = await http.post(
+    final resp = await _client.post(
       Uri.parse('$baseUrl/veiculos-furtados'),
       headers: _headers,
       body: jsonEncode({
@@ -84,7 +98,7 @@ class ApiClient {
 
   Future<List<dynamic>> _getLista(String caminho) async {
     final resp =
-        await http.get(Uri.parse('$baseUrl$caminho'), headers: _headers);
+        await _client.get(Uri.parse('$baseUrl$caminho'), headers: _headers);
     if (resp.statusCode != 200) {
       throw ApiException('Erro ${resp.statusCode} ao consultar $caminho');
     }
@@ -101,11 +115,47 @@ class ApiClient {
           .map((j) => Avistamento.fromJson(j))
           .toList();
 
-  Future<List<Alerta>> listarAlertas() async =>
-      (await _getLista('/alertas')).map((j) => Alerta.fromJson(j)).toList();
+  Future<List<CameraInfo>> listarCameras() async =>
+      (await _getLista('/cameras')).map((j) => CameraInfo.fromJson(j)).toList();
+
+  Future<List<Alerta>> listarAlertas() async {
+    final dados = await _getLista('/alertas');
+    // O servidor pode ainda usar o contrato antigo, com apenas os IDs.
+    if (dados.any((j) => j['avistamento']['veiculo'] == null) &&
+        !_cacheAtual(_veiculosCarregadosEm)) {
+      try {
+        for (final veiculo in await listarVeiculos()) {
+          _veiculosPorId[veiculo.id] = veiculo;
+        }
+      } catch (_) {
+        // Exibe o alerta pelo ID quando o cadastro não estiver disponível.
+      } finally {
+        _veiculosCarregadosEm = DateTime.now();
+      }
+    }
+    if (dados.any((j) => j['avistamento']['camera'] == null) &&
+        !_cacheAtual(_camerasCarregadasEm)) {
+      try {
+        for (final camera in await listarCameras()) {
+          _camerasPorId[camera.id] = camera;
+        }
+      } catch (_) {
+        // Mantém a lista de alertas mesmo se a consulta de câmeras falhar.
+      } finally {
+        _camerasCarregadasEm = DateTime.now();
+      }
+    }
+    return dados
+        .map((j) => Alerta.fromJson(
+              j,
+              veiculosPorId: _veiculosPorId,
+              camerasPorId: _camerasPorId,
+            ))
+        .toList();
+  }
 
   Future<Rota> gerarRota(int idVeiculo) async {
-    final resp = await http.post(
+    final resp = await _client.post(
       Uri.parse('$baseUrl/rotas/$idVeiculo/gerar'),
       headers: _headers,
     );
@@ -120,7 +170,7 @@ class ApiClient {
   }
 
   Future<void> marcarAlertaVisualizado(int idAlerta) async {
-    final resp = await http.patch(
+    final resp = await _client.patch(
       Uri.parse('$baseUrl/alertas/$idAlerta/visualizar'),
       headers: _headers,
     );
@@ -161,12 +211,13 @@ class Veiculo {
 class Avistamento {
   Avistamento.fromJson(Map<String, dynamic> j)
       : id = j['id_avistamento'],
+        idVeiculo = j['id_veiculo'],
         idCamera = j['id_camera'],
         dataHora = DateTime.parse(j['data_hora']),
         // A API serializa valores DECIMAL como string (ex.: "91.40")
         confianca = double.parse(j['confianca_leitura'].toString());
 
-  final int id, idCamera;
+  final int id, idVeiculo, idCamera;
   final DateTime dataHora;
   final double confianca;
 }
@@ -183,21 +234,28 @@ class CameraInfo {
 }
 
 class Alerta {
-  Alerta.fromJson(Map<String, dynamic> j)
-      : id = j['id_alerta'],
+  Alerta.fromJson(
+    Map<String, dynamic> j, {
+    Map<int, Veiculo> veiculosPorId = const {},
+    Map<int, CameraInfo> camerasPorId = const {},
+  })  : id = j['id_alerta'],
         status = j['status'],
         dataEnvio =
             j['data_envio'] != null ? DateTime.parse(j['data_envio']) : null,
         avistamento = Avistamento.fromJson(j['avistamento']),
-        veiculo = Veiculo.fromJson(j['avistamento']['veiculo']),
-        camera = CameraInfo.fromJson(j['avistamento']['camera']);
+        veiculo = j['avistamento']['veiculo'] != null
+            ? Veiculo.fromJson(j['avistamento']['veiculo'])
+            : veiculosPorId[j['avistamento']['id_veiculo']],
+        camera = j['avistamento']['camera'] != null
+            ? CameraInfo.fromJson(j['avistamento']['camera'])
+            : camerasPorId[j['avistamento']['id_camera']];
 
   final int id;
   final String status;
   final DateTime? dataEnvio;
   final Avistamento avistamento;
-  final Veiculo veiculo;
-  final CameraInfo camera;
+  final Veiculo? veiculo;
+  final CameraInfo? camera;
 }
 
 class PontoRota {
