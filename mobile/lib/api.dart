@@ -120,10 +120,13 @@ class ApiClient {
   }
 
   Future<void> marcarAlertaVisualizado(int idAlerta) async {
-    await http.patch(
+    final resp = await http.patch(
       Uri.parse('$baseUrl/alertas/$idAlerta/visualizar'),
       headers: _headers,
     );
+    if (resp.statusCode != 200) {
+      throw ApiException('Erro ${resp.statusCode} ao confirmar alerta');
+    }
   }
 }
 
@@ -168,18 +171,33 @@ class Avistamento {
   final double confianca;
 }
 
+class CameraInfo {
+  CameraInfo.fromJson(Map<String, dynamic> j)
+      : id = j['id_camera'],
+        descricao = j['descricao'],
+        endereco = j['endereco'];
+
+  final int id;
+  final String descricao;
+  final String? endereco;
+}
+
 class Alerta {
   Alerta.fromJson(Map<String, dynamic> j)
       : id = j['id_alerta'],
         status = j['status'],
         dataEnvio =
             j['data_envio'] != null ? DateTime.parse(j['data_envio']) : null,
-        avistamento = Avistamento.fromJson(j['avistamento']);
+        avistamento = Avistamento.fromJson(j['avistamento']),
+        veiculo = Veiculo.fromJson(j['avistamento']['veiculo']),
+        camera = CameraInfo.fromJson(j['avistamento']['camera']);
 
   final int id;
   final String status;
   final DateTime? dataEnvio;
   final Avistamento avistamento;
+  final Veiculo veiculo;
+  final CameraInfo camera;
 }
 
 class PontoRota {
@@ -222,9 +240,8 @@ class ZonaKde {
 class Rota {
   Rota.fromJson(Map<String, dynamic> j)
       : placa = j['placa'],
-        pontos = (j['pontos'] as List)
-            .map((p) => PontoRota.fromJson(p))
-            .toList(),
+        pontos =
+            (j['pontos'] as List).map((p) => PontoRota.fromJson(p)).toList(),
         predicaoKalman = j['predicao_kalman'] != null
             ? PredicaoKalman.fromJson(j['predicao_kalman'])
             : null,

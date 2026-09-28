@@ -70,6 +70,11 @@ class AvistamentoOut(BaseModel):
     confianca_leitura: Decimal
 
 
+class AvistamentoDetalhado(AvistamentoOut):
+    veiculo: VeiculoOut
+    camera: CameraOut
+
+
 class DeteccaoResultado(BaseModel):
     """Resposta da API ao dispositivo IoT após envio de uma detecção."""
     veiculo_furtado: bool
@@ -88,7 +93,7 @@ class AlertaOut(BaseModel):
 
 
 class AlertaDetalhado(AlertaOut):
-    avistamento: AvistamentoOut
+    avistamento: AvistamentoDetalhado
 
 
 # ── Rota ─────────────────────────────────────────────────────────────────────

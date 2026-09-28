@@ -32,6 +32,7 @@ from detector_veiculo import detectar_veiculos
 from reconhecedor_placa import ler_placa
 
 BASE = "http://127.0.0.1:8000"
+IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY", "")
 N_AMOSTRAS = 30
 random.seed(42)     # reprodutibilidade (geração de placas)
 np.random.seed(42)  # reprodutibilidade (ruído sintético do CT07)
@@ -46,6 +47,8 @@ def api(metodo, caminho, corpo=None, token=None):
     r.add_header("Content-Type", "application/json")
     if token:
         r.add_header("Authorization", f"Bearer {token}")
+    if caminho == "/deteccoes" and IOT_DEVICE_KEY:
+        r.add_header("X-Device-Key", IOT_DEVICE_KEY)
     try:
         with urllib.request.urlopen(r) as resp:
             return resp.status, json.loads(resp.read())
@@ -137,6 +140,8 @@ def registrar(ct, descricao, esperado, obtido, status):
 
 # ── Preparação ───────────────────────────────────────────────────────────────
 print("Preparando: login e placas de teste...")
+if not IOT_DEVICE_KEY:
+    raise SystemExit("Defina IOT_DEVICE_KEY antes de executar os testes")
 _, corpo = api("POST", "/auth/login",
                {"email": "admin@sistema.com", "senha": "admin123"})
 TOKEN = corpo["access_token"]

@@ -1,12 +1,11 @@
 {
-    "name": "rastreio_veiculos",
-    "short_name": "rastreio_veiculos",
+    "name": "Rastreio de Veículos",
+    "short_name": "Rastreio de Veículos",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#1A3A6B",
+    "theme_color": "#1A3A6B",
+    "description": "Monitoramento de veículos furtados, câmeras e alertas.",
     "prefer_related_applications": false,
     "icons": [
         {

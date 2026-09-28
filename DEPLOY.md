@@ -25,6 +25,7 @@ na hora:
 cat > .env <<EOF
 DB_SENHA=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 32)
+IOT_DEVICE_KEY=$(openssl rand -hex 32)
 ADMIN_SENHA=<escolha a senha do usuário admin do app>
 EOF
 chmod 600 .env
@@ -85,6 +86,10 @@ curl -s https://rastreio.murilosimoes.com.br/ | head -c 100
 - Documentação da API: `https://rastreio-api.murilosimoes.com.br/docs`
 - App web: abrir `https://rastreio.murilosimoes.com.br` no navegador e
   fazer login com `admin@sistema.com` + a senha `ADMIN_SENHA` do `.env`.
+
+## Chave do dispositivo IoT
+
+Copie o valor de `IOT_DEVICE_KEY` do `.env` do servidor para um arquivo protegido em cada Raspberry Pi, por exemplo `/etc/rastreio-iot.env`, com a linha `IOT_DEVICE_KEY=<mesma chave>`. Restrinja a leitura ao usuário do serviço e reinicie `rastreio-iot.service`. O arquivo de serviço versionado carrega esse caminho por `EnvironmentFile`. Não inclua a chave em código, capturas de tela ou no TCC. Ao trocar a chave, atualize a API e os dispositivos juntos.
 
 ## Manutenção
 

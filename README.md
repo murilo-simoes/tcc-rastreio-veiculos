@@ -64,7 +64,7 @@ Documentação interativa (Swagger): http://127.0.0.1:8000/docs
 | POST | /auth/login | Login — retorna token JWT |
 | GET | /veiculos-furtados | Lista veículos furtados |
 | POST | /veiculos-furtados | Cadastra veículo furtado (admin) |
-| POST | /deteccoes | **Endpoint do Raspberry Pi** — envia placa lida; gera alerta se furtado |
+| POST | /deteccoes | **Endpoint do Raspberry Pi** — exige `X-Device-Key`; envia placa lida e gera alerta se furtado |
 | GET | /alertas | Lista alertas gerados |
 | POST | /rotas/{id_veiculo}/gerar | Gera rota probabilística (mín. 2 avistamentos) |
 | GET | /rotas/{id_veiculo} | Última rota gerada do veículo |
@@ -105,7 +105,7 @@ py main.py foto.jpg         # processar uma imagem
 ```
 
 No Raspberry Pi, basta copiar a pasta `iot/`, instalar as dependências e
-definir as variáveis `API_URL` e `ID_CAMERA` (uma por dispositivo).
+definir as variáveis `API_URL`, `ID_CAMERA` e `IOT_DEVICE_KEY` (a mesma chave configurada na API). O envio a `POST /deteccoes` usa o cabeçalho `X-Device-Key`; sem a chave, a API recusa detecções. Para testes locais, defina `IOT_DEVICE_KEY` no ambiente da API, do módulo IoT e do processo que executa `testes/executar_casos_teste.py`. Gere uma chave aleatória longa e não a versione.
 
 ### Múltiplas câmeras em um único Raspberry Pi
 
@@ -148,7 +148,30 @@ crontab -e
 0 3 * * * /home/murilo/tcc-rastreio-veiculos/sistema/iot/.venv/bin/python3 /home/murilo/tcc-rastreio-veiculos/sistema/iot/limpar_capturas.py
 ```
 
-## Próximas fases
+## App web Flutter
 
-1. **Fase 5 — App Flutter**: login, lista de veículos, mapa com rota, push notifications
-2. **Fase 6 — Integração e testes** (CT01–CT08 do TCC)
+O código-fonte está em `mobile/`. A versão estática pronta para servir está em
+`webapp/`. Os alertas apresentam placa, marca, modelo, cor, horário e a
+identificação/local da câmera a partir de `GET /alertas`; o acesso à lista
+continua restrito a usuários autenticados. A tela permite filtrar alertas
+não visualizados e abrir o veículo relacionado.
+
+Para reconstruir o pacote web após alterações no Flutter:
+
+```bash
+cd mobile
+flutter pub get
+flutter analyze
+flutter test
+flutter build web --release --dart-define=API_URL=https://rastreio-api.murilosimoes.com.br
+```
+
+Copie o conteúdo de `mobile/build/web/` para `webapp/` antes de publicar.
+O build versionado usa a URL pública acima. Para outro ambiente, ajuste o
+valor de `API_URL` na compilação.
+
+## Validações pendentes
+
+Os ensaios com câmera física no Raspberry Pi, o tempo de entrega dos alertas
+até a interface e a publicação conjunta da API e do app web ainda precisam
+ser verificados no ambiente final. O checklist de qualificação está na pasta local do TCC.

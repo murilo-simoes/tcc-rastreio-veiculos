@@ -7,12 +7,14 @@ from sqlalchemy.orm import Session
 from app import schemas
 from app.auth import usuario_atual
 from app.database import get_db
+from app.device_auth import autorizar_dispositivo
 from app.models import Alerta, Avistamento, Camera, VeiculoFurtado
 
 router = APIRouter(tags=["Avistamentos"])
 
 
-@router.post("/deteccoes", response_model=schemas.DeteccaoResultado)
+@router.post("/deteccoes", response_model=schemas.DeteccaoResultado,
+             dependencies=[Depends(autorizar_dispositivo)])
 def registrar_deteccao(dados: schemas.AvistamentoCreate, db: Session = Depends(get_db)):
     """Endpoint chamado pelo dispositivo IoT (Raspberry Pi) a cada placa lida.
 

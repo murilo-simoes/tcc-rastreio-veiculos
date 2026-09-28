@@ -13,6 +13,8 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: IOT_DEVICE_KEY
+        sync: false
 
 databases:
   - name: rastreio-veiculos-db

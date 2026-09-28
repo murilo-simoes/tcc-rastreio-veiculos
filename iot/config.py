@@ -3,6 +3,7 @@ import os
 
 # URL da API na nuvem (em desenvolvimento, o backend local)
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+IOT_DEVICE_KEY = os.getenv("IOT_DEVICE_KEY", "")
 
 # Identificador desta câmera no banco de dados (tabela CAMERA)
 ID_CAMERA = int(os.getenv("ID_CAMERA", "1"))

@@ -30,6 +30,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://tcc_admin:${DB_SENHA}@db:5432/rastreio_veiculos
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      IOT_DEVICE_KEY: ${IOT_DEVICE_KEY:?defina IOT_DEVICE_KEY no arquivo .env}
       ADMIN_SENHA: ${ADMIN_SENHA:-admin123}
     ports:
       - "127.0.0.1:8090:8000"

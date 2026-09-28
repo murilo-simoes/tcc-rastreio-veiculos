@@ -4,7 +4,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-from config import API_URL, ID_CAMERA
+from config import API_URL, ID_CAMERA, IOT_DEVICE_KEY
 
 
 def enviar_deteccao(placa: str, confianca_ocr: float,
@@ -19,6 +19,9 @@ def enviar_deteccao(placa: str, confianca_ocr: float,
     Retorna a resposta da API. Em caso de falha de rede, devolve um dict
     de erro sem lançar exceção — o dispositivo deve continuar operando.
     """
+    if not IOT_DEVICE_KEY:
+        raise RuntimeError("Defina IOT_DEVICE_KEY no ambiente do dispositivo")
+
     payload = {
         "placa": placa,
         "id_camera": id_camera if id_camera is not None else ID_CAMERA,
@@ -31,6 +34,7 @@ def enviar_deteccao(placa: str, confianca_ocr: float,
         data=json.dumps(payload).encode(),
         headers={
             "Content-Type": "application/json",
+            "X-Device-Key": IOT_DEVICE_KEY,
             # User-Agent identificado: proxies (ex.: Cloudflare) costumam
             # bloquear o User-Agent padrao do Python como bot
             "User-Agent": "RastreioVeiculos-IoT/1.0",

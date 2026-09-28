@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app import schemas
 from app.auth import usuario_atual
 from app.database import get_db
-from app.models import Alerta
+from app.models import Alerta, Avistamento
 
 router = APIRouter(prefix="/alertas", tags=["Alertas"],
                    dependencies=[Depends(usuario_atual)])
@@ -13,7 +13,12 @@ router = APIRouter(prefix="/alertas", tags=["Alertas"],
 
 @router.get("", response_model=list[schemas.AlertaDetalhado])
 def listar(status_alerta: str | None = None, db: Session = Depends(get_db)):
-    query = select(Alerta).order_by(Alerta.id_alerta.desc())
+    query = (select(Alerta)
+             .options(
+                 selectinload(Alerta.avistamento).selectinload(Avistamento.veiculo),
+                 selectinload(Alerta.avistamento).selectinload(Avistamento.camera),
+             )
+             .order_by(Alerta.id_alerta.desc()))
     if status_alerta:
         query = query.where(Alerta.status == status_alerta)
     return db.scalars(query).all()
