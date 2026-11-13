@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -20,10 +21,19 @@ class VeiculoCreate(VeiculoBase):
 
 
 class VeiculoUpdate(BaseModel):
-    marca: str | None = None
-    modelo: str | None = None
-    cor: str | None = None
-    status: str | None = None
+    placa: str | None = Field(
+        default=None, min_length=7, max_length=8,
+        pattern=r"^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
+    )
+    marca: str | None = Field(default=None, min_length=1, max_length=50)
+    modelo: str | None = Field(default=None, min_length=1, max_length=50)
+    cor: str | None = Field(default=None, min_length=1, max_length=30)
+    ano: int | None = Field(default=None, ge=1950)
+    data_furto: date | None = None
+    num_boletim_ocorrencia: str | None = Field(
+        default=None, min_length=1, max_length=30,
+    )
+    status: Literal["ativo", "recuperado", "cancelado"] | None = None
 
 
 class VeiculoOut(VeiculoBase):
@@ -136,10 +146,10 @@ class RotaOut(BaseModel):
 
 # ── Usuário / Autenticação ───────────────────────────────────────────────────
 class UsuarioCreate(BaseModel):
-    nome: str
+    nome: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    senha: str = Field(min_length=6)
-    perfil: str = "operador"
+    senha: str = Field(min_length=8, max_length=128)
+    perfil: Literal["administrador", "operador"] = "operador"
 
 
 class UsuarioOut(BaseModel):

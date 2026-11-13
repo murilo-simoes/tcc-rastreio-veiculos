@@ -62,8 +62,12 @@ Documentação interativa (Swagger): http://127.0.0.1:8000/docs
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | POST | /auth/login | Login — retorna token JWT |
+| GET | /auth/usuarios | Lista contas cadastradas (admin) |
+| POST | /auth/usuarios | Cria conta com perfil de operador (admin) |
 | GET | /veiculos-furtados | Lista veículos furtados |
 | POST | /veiculos-furtados | Cadastra veículo furtado (admin) |
+| PATCH | /veiculos-furtados/{id} | Edita os dados do veículo e seu status (admin) |
+| DELETE | /veiculos-furtados/{id} | Encerra o monitoramento e preserva o histórico (admin) |
 | POST | /deteccoes | **Endpoint do Raspberry Pi** — exige `X-Device-Key`; envia placa lida e gera alerta se furtado |
 | GET | /alertas | Lista alertas gerados |
 | POST | /rotas/{id_veiculo}/gerar | Gera rota probabilística (mín. 2 avistamentos) |
@@ -155,6 +159,13 @@ O código-fonte está em `mobile/`. A versão estática pronta para servir está
 identificação/local da câmera a partir de `GET /alertas`; o acesso à lista
 continua restrito a usuários autenticados. A tela permite filtrar alertas
 não visualizados e abrir o veículo relacionado.
+
+Administradores também podem criar contas de operador na aba **Usuários** e
+gerenciar os veículos monitorados: cadastrar, editar e encerrar o
+monitoramento. O encerramento é lógico: o veículo deixa de gerar novos
+avistamentos, enquanto os registros anteriores permanecem disponíveis para
+consulta histórica. Operadores podem consultar veículos e alertas, mas não
+alterar esses cadastros.
 
 Para reconstruir o pacote web após alterações no Flutter:
 

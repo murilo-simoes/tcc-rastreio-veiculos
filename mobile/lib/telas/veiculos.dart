@@ -33,9 +33,55 @@ class _TelaVeiculosState extends State<TelaVeiculos> {
         _ => Colors.blueGrey,
       };
 
-  Future<void> _abrirCadastro() async {
-    final criado = await mostrarCadastroVeiculo(context);
-    if (criado == true) await _recarregar();
+  String _rotuloStatus(String status) => switch (status) {
+        'ativo' => 'Monitorando',
+        'recuperado' => 'Recuperado',
+        'cancelado' => 'Encerrado',
+        _ => status,
+      };
+
+  Future<void> _abrirCadastro({Veiculo? veiculo}) async {
+    final salvo = await mostrarCadastroVeiculo(context, veiculo: veiculo);
+    if (salvo == true) await _recarregar();
+  }
+
+  Future<void> _encerrarMonitoramento(Veiculo veiculo) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Encerrar monitoramento?'),
+        content: Text(
+          'O veículo ${veiculo.placa} deixará de ser monitorado. '
+          'Os avistamentos já registrados serão preservados no histórico.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    try {
+      await ApiClient.instance.encerrarMonitoramento(veiculo.id);
+      await _recarregar();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Monitoramento de ${veiculo.placa} encerrado.')),
+        );
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Não foi possível encerrar: $e')),
+        );
+      }
+    }
   }
 
   Widget _cartao(Veiculo veiculo) {
@@ -77,17 +123,51 @@ class _TelaVeiculosState extends State<TelaVeiculos> {
                 ),
               ),
               const SizedBox(width: 8),
-              Tooltip(
-                message: veiculo.status,
-                child: Icon(
+              Chip(
+                avatar: Icon(
                   veiculo.status == 'ativo'
                       ? Icons.warning_amber_outlined
-                      : Icons.check_circle_outline,
+                      : veiculo.status == 'recuperado'
+                          ? Icons.check_circle_outline
+                          : Icons.remove_circle_outline,
+                  size: 18,
                   color: cor,
                 ),
+                label: Text(_rotuloStatus(veiculo.status)),
+                visualDensity: VisualDensity.compact,
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right),
+              if (ApiClient.instance.isAdmin) ...[
+                const SizedBox(width: 4),
+                PopupMenuButton<String>(
+                  tooltip: 'Ações do veículo',
+                  onSelected: (acao) {
+                    if (acao == 'editar') _abrirCadastro(veiculo: veiculo);
+                    if (acao == 'encerrar') _encerrarMonitoramento(veiculo);
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'editar',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Editar cadastro'),
+                      ),
+                    ),
+                    if (veiculo.status != 'cancelado')
+                      const PopupMenuItem(
+                        value: 'encerrar',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.archive_outlined),
+                          title: Text('Encerrar monitoramento'),
+                        ),
+                      ),
+                  ],
+                ),
+              ] else ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right),
+              ],
             ],
           ),
         ),
@@ -183,12 +263,14 @@ class _TelaVeiculosState extends State<TelaVeiculos> {
                             for (final filtro in [
                               'todos',
                               'ativo',
-                              'recuperado'
+                              'recuperado',
+                              'cancelado',
                             ])
                               ChoiceChip(
                                 label: Text(switch (filtro) {
                                   'ativo' => 'Ativos',
                                   'recuperado' => 'Recuperados',
+                                  'cancelado' => 'Encerrados',
                                   _ => 'Todos',
                                 }),
                                 selected: _filtro == filtro,

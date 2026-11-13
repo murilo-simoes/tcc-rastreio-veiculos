@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import 'alertas.dart';
 import 'login.dart';
+import 'usuarios.dart';
 import 'veiculos.dart';
 
 /// Navegação compacta no celular e lateral no navegador amplo.
@@ -16,8 +17,17 @@ class TelaInicio extends StatefulWidget {
 class _TelaInicioState extends State<TelaInicio> {
   int _aba = 0;
 
-  static const _telas = [TelaVeiculos(), TelaAlertas()];
-  static const _titulos = ['Veículos monitorados', 'Alertas'];
+  List<Widget> get _telas => [
+        const TelaVeiculos(),
+        const TelaAlertas(),
+        if (ApiClient.instance.isAdmin) const TelaUsuarios(),
+      ];
+
+  List<String> get _titulos => [
+        'Veículos monitorados',
+        'Alertas',
+        if (ApiClient.instance.isAdmin) 'Usuários',
+      ];
 
   void _sair() {
     ApiClient.instance.logout();
@@ -31,11 +41,49 @@ class _TelaInicioState extends State<TelaInicio> {
     return LayoutBuilder(builder: (context, constraints) {
       final amplo = constraints.maxWidth >= 850;
       final railEstendido = constraints.maxWidth >= 1100;
+      final telas = _telas;
+      final titulos = _titulos;
+      final destinos = <NavigationDestination>[
+        const NavigationDestination(
+          icon: Icon(Icons.directions_car_outlined),
+          selectedIcon: Icon(Icons.directions_car),
+          label: 'Veículos',
+        ),
+        const NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications_active),
+          label: 'Alertas',
+        ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Usuários',
+          ),
+      ];
+      final destinosRail = <NavigationRailDestination>[
+        const NavigationRailDestination(
+          icon: Icon(Icons.directions_car_outlined),
+          selectedIcon: Icon(Icons.directions_car),
+          label: Text('Veículos'),
+        ),
+        const NavigationRailDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications_active),
+          label: Text('Alertas'),
+        ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationRailDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: Text('Usuários'),
+          ),
+      ];
       return Scaffold(
         appBar: AppBar(
           title: Text(amplo
-              ? 'Rastreio de veículos  /  ${_titulos[_aba]}'
-              : _titulos[_aba]),
+              ? 'Rastreio de veículos  /  ${titulos[_aba]}'
+              : titulos[_aba]),
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),
@@ -61,41 +109,19 @@ class _TelaInicioState extends State<TelaInicio> {
                           size: 32,
                           color: Theme.of(context).colorScheme.primary),
                     ),
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.directions_car_outlined),
-                        selectedIcon: Icon(Icons.directions_car),
-                        label: Text('Veículos'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.notifications_outlined),
-                        selectedIcon: Icon(Icons.notifications_active),
-                        label: Text('Alertas'),
-                      ),
-                    ],
+                    destinations: destinosRail,
                   ),
                   const VerticalDivider(width: 1),
-                  Expanded(child: _telas[_aba]),
+                  Expanded(child: telas[_aba]),
                 ],
               )
-            : _telas[_aba],
+            : telas[_aba],
         bottomNavigationBar: amplo
             ? null
             : NavigationBar(
                 selectedIndex: _aba,
                 onDestinationSelected: (i) => setState(() => _aba = i),
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.directions_car_outlined),
-                    selectedIcon: Icon(Icons.directions_car),
-                    label: 'Veículos',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.notifications_outlined),
-                    selectedIcon: Icon(Icons.notifications_active),
-                    label: 'Alertas',
-                  ),
-                ],
+                destinations: destinos,
               ),
       );
     });

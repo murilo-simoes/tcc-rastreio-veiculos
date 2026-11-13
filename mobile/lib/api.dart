@@ -88,12 +88,96 @@ class ApiClient {
       return Veiculo.fromJson(jsonDecode(utf8.decode(resp.bodyBytes)));
     }
     if (resp.statusCode == 409) {
-      throw ApiException('Essa placa já está cadastrada');
+      throw ApiException('A placa ou o número do boletim já está cadastrado');
     }
     if (resp.statusCode == 403) {
       throw ApiException('Apenas administradores podem cadastrar veículos');
     }
     throw ApiException('Erro ${resp.statusCode} ao cadastrar veículo');
+  }
+
+  Future<Veiculo> atualizarVeiculo({
+    required int id,
+    required String placa,
+    required String marca,
+    required String modelo,
+    required String cor,
+    required int ano,
+    required DateTime dataFurto,
+    required String boletim,
+    required String status,
+  }) async {
+    final resp = await _client.patch(
+      Uri.parse('$baseUrl/veiculos-furtados/$id'),
+      headers: _headers,
+      body: jsonEncode({
+        'placa': placa.trim().toUpperCase(),
+        'marca': marca.trim(),
+        'modelo': modelo.trim(),
+        'cor': cor.trim(),
+        'ano': ano,
+        'data_furto': dataFurto.toIso8601String().split('T').first,
+        'num_boletim_ocorrencia': boletim.trim(),
+        'status': status,
+      }),
+    );
+    if (resp.statusCode == 200) {
+      return Veiculo.fromJson(jsonDecode(utf8.decode(resp.bodyBytes)));
+    }
+    if (resp.statusCode == 409) {
+      throw ApiException('A placa ou o número do boletim já está cadastrado');
+    }
+    if (resp.statusCode == 403) {
+      throw ApiException('Apenas administradores podem editar veículos');
+    }
+    throw ApiException('Erro ${resp.statusCode} ao editar veículo');
+  }
+
+  Future<void> encerrarMonitoramento(int id) async {
+    final resp = await _client.delete(
+      Uri.parse('$baseUrl/veiculos-furtados/$id'),
+      headers: _headers,
+    );
+    if (resp.statusCode == 204) return;
+    if (resp.statusCode == 403) {
+      throw ApiException('Apenas administradores podem encerrar o monitoramento');
+    }
+    throw ApiException('Erro ${resp.statusCode} ao encerrar monitoramento');
+  }
+
+  Future<List<Usuario>> listarUsuarios() async =>
+      (await _getLista('/auth/usuarios'))
+          .map((j) => Usuario.fromJson(j))
+          .toList();
+
+  Future<Usuario> cadastrarUsuario({
+    required String nome,
+    required String email,
+    required String senha,
+  }) async {
+    final resp = await _client.post(
+      Uri.parse('$baseUrl/auth/usuarios'),
+      headers: _headers,
+      body: jsonEncode({
+        'nome': nome.trim(),
+        'email': email.trim().toLowerCase(),
+        'senha': senha,
+        'perfil': 'operador',
+      }),
+    );
+    if (resp.statusCode == 201) {
+      return Usuario.fromJson(jsonDecode(utf8.decode(resp.bodyBytes)));
+    }
+    if (resp.statusCode == 409) {
+      throw ApiException('Este e-mail já está cadastrado');
+    }
+    if (resp.statusCode == 403) {
+      throw ApiException('Apenas administradores podem cadastrar usuários');
+    }
+    if (resp.statusCode == 422) {
+      throw ApiException('Confira o e-mail e use uma senha com pelo menos 8 caracteres');
+    }
+    throw ApiException('Erro ${resp.statusCode} ao cadastrar usuário');
   }
 
   Future<List<dynamic>> _getLista(String caminho) async {
@@ -206,6 +290,19 @@ class Veiculo {
   final int ano;
 
   String get descricao => '$marca $modelo $ano — $cor';
+}
+
+class Usuario {
+  Usuario.fromJson(Map<String, dynamic> j)
+      : id = j['id_usuario'],
+        nome = j['nome'],
+        email = j['email'],
+        perfil = j['perfil'],
+        dataCriacao = DateTime.parse(j['data_criacao']);
+
+  final int id;
+  final String nome, email, perfil;
+  final DateTime dataCriacao;
 }
 
 class Avistamento {

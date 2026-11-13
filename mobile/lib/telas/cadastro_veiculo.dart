@@ -2,21 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 
-/// Exibe o modal de cadastro de veículo furtado.
+/// Exibe o modal de cadastro ou edição de veículo furtado.
 ///
 /// Retorna `true` se o veículo foi cadastrado com sucesso (para o chamador
 /// saber que precisa recarregar a lista), ou `null`/`false` se cancelado.
-Future<bool?> mostrarCadastroVeiculo(BuildContext context) {
+Future<bool?> mostrarCadastroVeiculo(
+  BuildContext context, {
+  Veiculo? veiculo,
+}) {
   return showDialog<bool>(
     context: context,
-    builder: (_) => const _DialogoCadastroVeiculo(),
+    builder: (_) => _DialogoCadastroVeiculo(veiculo: veiculo),
   );
 }
 
 final _padraoPlaca = RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$');
 
 class _DialogoCadastroVeiculo extends StatefulWidget {
-  const _DialogoCadastroVeiculo();
+  const _DialogoCadastroVeiculo({this.veiculo});
+
+  final Veiculo? veiculo;
 
   @override
   State<_DialogoCadastroVeiculo> createState() =>
@@ -32,15 +37,34 @@ class _DialogoCadastroVeiculoState extends State<_DialogoCadastroVeiculo> {
   final _anoCtrl = TextEditingController();
   final _boletimCtrl = TextEditingController();
   DateTime? _dataFurto;
+  String _status = 'ativo';
   bool _salvando = false;
   String? _erro;
 
+  @override
+  void initState() {
+    super.initState();
+    final veiculo = widget.veiculo;
+    if (veiculo == null) return;
+    _placaCtrl.text = veiculo.placa;
+    _marcaCtrl.text = veiculo.marca;
+    _modeloCtrl.text = veiculo.modelo;
+    _corCtrl.text = veiculo.cor;
+    _anoCtrl.text = veiculo.ano.toString();
+    _boletimCtrl.text = veiculo.boletim;
+    _dataFurto = DateTime.tryParse(veiculo.dataFurto);
+    _status = veiculo.status;
+  }
+
   Future<void> _escolherData() async {
     final agora = DateTime.now();
+    final dataInicial = _dataFurto == null || _dataFurto!.isAfter(agora)
+        ? agora
+        : _dataFurto!;
     final data = await showDatePicker(
       context: context,
-      initialDate: agora,
-      firstDate: DateTime(2000),
+      initialDate: dataInicial,
+      firstDate: DateTime(1950),
       lastDate: agora,
     );
     if (data != null) setState(() => _dataFurto = data);
@@ -57,15 +81,37 @@ class _DialogoCadastroVeiculoState extends State<_DialogoCadastroVeiculo> {
       _erro = null;
     });
     try {
-      await ApiClient.instance.cadastrarVeiculo(
-        placa: _placaCtrl.text.trim().toUpperCase(),
-        marca: _marcaCtrl.text.trim(),
-        modelo: _modeloCtrl.text.trim(),
-        cor: _corCtrl.text.trim(),
-        ano: int.parse(_anoCtrl.text.trim()),
-        dataFurto: _dataFurto!,
-        boletim: _boletimCtrl.text.trim(),
-      );
+      final veiculo = widget.veiculo;
+      final placa = _placaCtrl.text.trim().toUpperCase();
+      final marca = _marcaCtrl.text.trim();
+      final modelo = _modeloCtrl.text.trim();
+      final cor = _corCtrl.text.trim();
+      final ano = int.parse(_anoCtrl.text.trim());
+      final dataFurto = _dataFurto!;
+      final boletim = _boletimCtrl.text.trim();
+      if (veiculo == null) {
+        await ApiClient.instance.cadastrarVeiculo(
+          placa: placa,
+          marca: marca,
+          modelo: modelo,
+          cor: cor,
+          ano: ano,
+          dataFurto: dataFurto,
+          boletim: boletim,
+        );
+      } else {
+        await ApiClient.instance.atualizarVeiculo(
+          id: veiculo.id,
+          placa: placa,
+          marca: marca,
+          modelo: modelo,
+          cor: cor,
+          ano: ano,
+          dataFurto: dataFurto,
+          boletim: boletim,
+          status: _status,
+        );
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on Exception catch (e) {
@@ -95,7 +141,9 @@ class _DialogoCadastroVeiculoState extends State<_DialogoCadastroVeiculo> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Cadastrar veículo furtado'),
+      title: Text(widget.veiculo == null
+          ? 'Cadastrar veículo furtado'
+          : 'Editar veículo monitorado'),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -160,10 +208,25 @@ class _DialogoCadastroVeiculoState extends State<_DialogoCadastroVeiculo> {
                 const SizedBox(height: 8),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(
-                      _dataFurto == null ? 'Data do furto' : 'Furtado em $_dataFormatada'),
+                  title: Text(_dataFurto == null
+                      ? 'Data do furto'
+                      : 'Furtado em $_dataFormatada'),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: _escolherData,
+                ),
+                DropdownButtonFormField<String>(
+                  value: _status,
+                  decoration: const InputDecoration(labelText: 'Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'ativo', child: Text('Monitorando')),
+                    DropdownMenuItem(
+                        value: 'recuperado', child: Text('Recuperado')),
+                    DropdownMenuItem(
+                        value: 'cancelado', child: Text('Encerrado')),
+                  ],
+                  onChanged: (valor) {
+                    if (valor != null) setState(() => _status = valor);
+                  },
                 ),
                 if (_erro != null)
                   Padding(
@@ -188,7 +251,9 @@ class _DialogoCadastroVeiculoState extends State<_DialogoCadastroVeiculo> {
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Salvar'),
+              : Text(widget.veiculo == null
+                  ? 'Cadastrar'
+                  : 'Salvar alterações'),
         ),
       ],
     );

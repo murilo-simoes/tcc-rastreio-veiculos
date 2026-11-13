@@ -35,6 +35,17 @@ def cadastrar(dados: schemas.VeiculoCreate, db: Session = Depends(get_db)):
     )
     if ja_existe:
         raise HTTPException(status.HTTP_409_CONFLICT, "Placa já cadastrada")
+    boletim_existente = db.scalar(
+        select(VeiculoFurtado).where(
+            VeiculoFurtado.num_boletim_ocorrencia
+            == dados.num_boletim_ocorrencia
+        )
+    )
+    if boletim_existente:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Número do boletim já associado a outro veículo",
+        )
     veiculo = VeiculoFurtado(**dados.model_dump())
     veiculo.placa = veiculo.placa.upper()
     db.add(veiculo)
@@ -49,7 +60,34 @@ def atualizar(id_veiculo: int, dados: schemas.VeiculoUpdate, db: Session = Depen
     veiculo = db.get(VeiculoFurtado, id_veiculo)
     if veiculo is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Veículo não encontrado")
-    for campo, valor in dados.model_dump(exclude_none=True).items():
+
+    alteracoes = dados.model_dump(exclude_unset=True, exclude_none=True)
+    if "placa" in alteracoes:
+        alteracoes["placa"] = alteracoes["placa"].upper()
+        placa_existente = db.scalar(
+            select(VeiculoFurtado).where(
+                VeiculoFurtado.placa == alteracoes["placa"],
+                VeiculoFurtado.id_veiculo != id_veiculo,
+            )
+        )
+        if placa_existente:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Placa já cadastrada")
+
+    if "num_boletim_ocorrencia" in alteracoes:
+        boletim_existente = db.scalar(
+            select(VeiculoFurtado).where(
+                VeiculoFurtado.num_boletim_ocorrencia
+                == alteracoes["num_boletim_ocorrencia"],
+                VeiculoFurtado.id_veiculo != id_veiculo,
+            )
+        )
+        if boletim_existente:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Número do boletim já está associado a outro veículo",
+            )
+
+    for campo, valor in alteracoes.items():
         setattr(veiculo, campo, valor)
     db.commit()
     db.refresh(veiculo)
