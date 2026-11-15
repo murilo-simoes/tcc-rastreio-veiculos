@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import 'alertas.dart';
+import 'cameras.dart';
 import 'login.dart';
 import 'usuarios.dart';
 import 'veiculos.dart';
@@ -20,13 +21,65 @@ class _TelaInicioState extends State<TelaInicio> {
   List<Widget> get _telas => [
         const TelaVeiculos(),
         const TelaAlertas(),
+        if (ApiClient.instance.isAdmin) const TelaCameras(),
         if (ApiClient.instance.isAdmin) const TelaUsuarios(),
       ];
 
   List<String> get _titulos => [
         'Veículos monitorados',
         'Alertas',
+        if (ApiClient.instance.isAdmin) 'Câmeras',
         if (ApiClient.instance.isAdmin) 'Usuários',
+      ];
+
+  List<NavigationDestination> get _destinos => [
+        const NavigationDestination(
+          icon: Icon(Icons.directions_car_outlined),
+          selectedIcon: Icon(Icons.directions_car),
+          label: 'Veículos',
+        ),
+        const NavigationDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications_active),
+          label: 'Alertas',
+        ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationDestination(
+            icon: Icon(Icons.videocam_outlined),
+            selectedIcon: Icon(Icons.videocam),
+            label: 'Câmeras',
+          ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Usuários',
+          ),
+      ];
+
+  List<NavigationRailDestination> get _railDestinos => [
+        const NavigationRailDestination(
+          icon: Icon(Icons.directions_car_outlined),
+          selectedIcon: Icon(Icons.directions_car),
+          label: Text('Veículos'),
+        ),
+        const NavigationRailDestination(
+          icon: Icon(Icons.notifications_outlined),
+          selectedIcon: Icon(Icons.notifications_active),
+          label: Text('Alertas'),
+        ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationRailDestination(
+            icon: Icon(Icons.videocam_outlined),
+            selectedIcon: Icon(Icons.videocam),
+            label: Text('Câmeras'),
+          ),
+        if (ApiClient.instance.isAdmin)
+          const NavigationRailDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: Text('Usuários'),
+          ),
       ];
 
   void _sair() {
@@ -43,42 +96,6 @@ class _TelaInicioState extends State<TelaInicio> {
       final railEstendido = constraints.maxWidth >= 1100;
       final telas = _telas;
       final titulos = _titulos;
-      final destinos = <NavigationDestination>[
-        const NavigationDestination(
-          icon: Icon(Icons.directions_car_outlined),
-          selectedIcon: Icon(Icons.directions_car),
-          label: 'Veículos',
-        ),
-        const NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications_active),
-          label: 'Alertas',
-        ),
-        if (ApiClient.instance.isAdmin)
-          const NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Usuários',
-          ),
-      ];
-      final destinosRail = <NavigationRailDestination>[
-        const NavigationRailDestination(
-          icon: Icon(Icons.directions_car_outlined),
-          selectedIcon: Icon(Icons.directions_car),
-          label: Text('Veículos'),
-        ),
-        const NavigationRailDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications_active),
-          label: Text('Alertas'),
-        ),
-        if (ApiClient.instance.isAdmin)
-          const NavigationRailDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: Text('Usuários'),
-          ),
-      ];
       return Scaffold(
         appBar: AppBar(
           title: Text(amplo
@@ -109,7 +126,7 @@ class _TelaInicioState extends State<TelaInicio> {
                           size: 32,
                           color: Theme.of(context).colorScheme.primary),
                     ),
-                    destinations: destinosRail,
+                    destinations: _railDestinos,
                   ),
                   const VerticalDivider(width: 1),
                   Expanded(child: telas[_aba]),
@@ -121,7 +138,7 @@ class _TelaInicioState extends State<TelaInicio> {
             : NavigationBar(
                 selectedIndex: _aba,
                 onDestinationSelected: (i) => setState(() => _aba = i),
-                destinations: destinos,
+                destinations: _destinos,
               ),
       );
     });

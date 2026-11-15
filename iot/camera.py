@@ -3,7 +3,7 @@
 import cv2
 
 
-def abrir_camera(fonte: int) -> cv2.VideoCapture:
+def abrir_camera(fonte: int | str) -> cv2.VideoCapture:
     """Abre a câmera pedindo MJPG + resolução alta.
 
     Sem isso, webcams USB baratas costumam cair no menor formato bruto
@@ -12,6 +12,10 @@ def abrir_camera(fonte: int) -> cv2.VideoCapture:
     em 640x480 e passou a ser lida corretamente em 1280x720.
     """
     captura = cv2.VideoCapture(fonte)
+    # Mantém o buffer curto quando o backend V4L2 aceita esta propriedade.
+    # Sem isso, uma câmera que fica alguns segundos sem ser lida pode devolver
+    # quadros antigos acumulados, dando a impressão de atraso na prévia.
+    captura.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     captura.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     captura.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     captura.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)

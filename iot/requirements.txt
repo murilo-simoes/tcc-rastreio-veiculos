@@ -1,3 +1,7 @@
 ultralytics
 easyocr
 opencv-python
+# Detector de placas exportado para NCNN (Raspberry Pi)
+ncnn
+# Reconhecedor de caracteres específico para placas (padrão do MOTOR_OCR)
+fast-plate-ocr[onnx]

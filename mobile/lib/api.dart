@@ -5,6 +5,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -201,6 +202,21 @@ class ApiClient {
 
   Future<List<CameraInfo>> listarCameras() async =>
       (await _getLista('/cameras')).map((j) => CameraInfo.fromJson(j)).toList();
+
+  Future<Uint8List> buscarPreviaCamera(int idCamera) async {
+    final resp = await _client.get(
+      Uri.parse('$baseUrl/cameras/$idCamera/preview'),
+      headers: {'Authorization': 'Bearer $_token'},
+    );
+    if (resp.statusCode != 200) {
+      throw ApiException(resp.statusCode == 404
+          ? 'Aguardando imagem'
+          : resp.statusCode == 503
+              ? 'Sem sinal recente'
+              : 'Erro ${resp.statusCode} ao carregar imagem');
+    }
+    return resp.bodyBytes;
+  }
 
   Future<List<Alerta>> listarAlertas() async {
     final dados = await _getLista('/alertas');

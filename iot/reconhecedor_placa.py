@@ -1,22 +1,23 @@
 """
-Leitura de placas veiculares (padrão Mercosul) com EasyOCR.
+Leitura de placas veiculares (padrão Mercosul e antigo).
 
-Recebe o recorte da imagem do veículo detectado pelo YOLO, faz o
-pré-processamento com OpenCV e extrai o texto da placa via OCR,
-validando contra o formato Mercosul: LLL N L NN (ex.: ABC1D23).
-O formato antigo brasileiro (LLL-NNNN) também é aceito.
+Dois motores, escolhidos por MOTOR_OCR:
+- "fast_plate_ocr" (padrão): reconhecedor treinado especificamente para
+  placas (fast-plate-ocr, modelo cct-xs-v2-global, ONNX). Lê o recorte da
+  placa inteiro de uma vez, em ~50 ms no Raspberry Pi 4.
+- "easyocr": OCR genérico (CRAFT + reconhecedor), usado até 15/11/2026.
+  Confundia caracteres da fonte das placas (ex.: "9" lido como "2").
+
+Em ambos, o texto é validado contra o formato Mercosul LLL N L NN
+(ex.: ABC1D23) ou o antigo LLL NNNN.
 """
 import os
 import re
 
 import cv2
-import easyocr
 import numpy as np
-import torch
 
-# Usa todos os nucleos disponiveis (o torch reserva 1 por padrao em alguns
-# builds) -- reduziu o tempo de OCR em ~2x nos testes no Raspberry Pi 4
-torch.set_num_threads(os.cpu_count() or 1)
+from config import MODELO_OCR_PLACA, MOTOR_OCR
 
 # Limita o canvas interno do EasyOCR (padrao 2560px) -- a placa e um texto
 # pequeno e bem contrastado, nao precisa da resolucao maxima. Reduziu o
@@ -33,15 +34,42 @@ LETRA_PARA_DIGITO = {"O": "0", "Q": "0", "D": "0", "I": "1", "Z": "2", "S": "5",
 DIGITO_PARA_LETRA = {v: k for k, v in
                      {"O": "0", "I": "1", "Z": "2", "S": "5", "B": "8", "G": "6"}.items()}
 
-_leitor: easyocr.Reader | None = None
+_leitor = None
+_reconhecedor_placa = None
 
 
-def _get_leitor() -> easyocr.Reader:
+def _get_leitor():
     """Inicializa o EasyOCR uma única vez (o carregamento do modelo é lento)."""
     global _leitor
     if _leitor is None:
+        import easyocr
+        import torch
+        # Usa todos os nucleos disponiveis (o torch reserva 1 por padrao em
+        # alguns builds) -- reduziu o tempo de OCR em ~2x no Raspberry Pi 4
+        torch.set_num_threads(os.cpu_count() or 1)
         _leitor = easyocr.Reader(["pt"], gpu=False, verbose=False)
     return _leitor
+
+
+def _get_reconhecedor_placa():
+    """Inicializa o fast-plate-ocr uma única vez (baixa o modelo no 1º uso)."""
+    global _reconhecedor_placa
+    if _reconhecedor_placa is None:
+        from fast_plate_ocr import LicensePlateRecognizer
+        _reconhecedor_placa = LicensePlateRecognizer(MODELO_OCR_PLACA)
+    return _reconhecedor_placa
+
+
+def _ler_placa_fast_plate_ocr(recorte_placa: np.ndarray) -> tuple[str, float] | None:
+    """Lê o recorte da placa com o modelo específico para placas."""
+    previsao = _get_reconhecedor_placa().run(recorte_placa, return_confidence=True)[0]
+    bruto = previsao.plate.replace("_", "")   # o modelo completa com "_" até 10
+    placa = _normalizar(bruto)
+    if not (PADRAO_MERCOSUL.match(placa) or PADRAO_ANTIGO.match(placa)):
+        return None
+    # Confiança = média da probabilidade de cada caractere da placa lida
+    probs = np.asarray(previsao.char_probs)[:len(bruto)]
+    return placa, float(probs.mean())
 
 
 def _preprocessar(recorte_veiculo: np.ndarray) -> np.ndarray:
@@ -90,6 +118,8 @@ def ler_placa(recorte_veiculo: np.ndarray) -> tuple[str, float] | None:
 
     Retorna (placa, confianca 0–1) ou None se nenhuma placa válida for lida.
     """
+    if MOTOR_OCR == "fast_plate_ocr":
+        return _ler_placa_fast_plate_ocr(recorte_veiculo)
     imagem = _preprocessar(recorte_veiculo)
     resultados = _get_leitor().readtext(
         imagem,

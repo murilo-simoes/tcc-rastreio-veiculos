@@ -9,7 +9,9 @@ User=murilo
 WorkingDirectory=/home/murilo/tcc-rastreio-veiculos/sistema/iot
 Environment=API_URL=https://rastreio-api.murilosimoes.com.br
 EnvironmentFile=/etc/rastreio-iot.env
-Environment=CAMERAS=0:1,2:2,4:3
+Environment=PYTHONUNBUFFERED=1
+Environment=INTERVALO_PROCESSAMENTO=0.1
+Environment=CAMERAS=/dev/v4l/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.1:1.0-video-index0:1,/dev/v4l/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.2:1.0-video-index0:2,/dev/v4l/by-path/platform-fd500000.pcie-pci-0000:01:00.0-usb-0:1.4:1.0-video-index0:3
 ExecStart=/home/murilo/tcc-rastreio-veiculos/sistema/iot/.venv/bin/python3 main_multicamera.py
 Restart=on-failure
 RestartSec=10

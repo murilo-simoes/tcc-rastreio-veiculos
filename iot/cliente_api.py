@@ -7,9 +7,31 @@ from datetime import datetime
 from config import API_URL, ID_CAMERA, IOT_DEVICE_KEY
 
 
+def enviar_previa(quadro_jpeg: bytes, id_camera: int) -> bool:
+    """Envia um quadro JPEG pequeno para a prévia de diagnóstico do painel."""
+    if not IOT_DEVICE_KEY:
+        return False
+    req = urllib.request.Request(
+        f"{API_URL}/cameras/{id_camera}/preview",
+        data=quadro_jpeg,
+        headers={
+            "Content-Type": "image/jpeg",
+            "X-Device-Key": IOT_DEVICE_KEY,
+            "User-Agent": "RastreioVeiculos-IoT/1.0",
+        },
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=2):
+            return True
+    except (urllib.error.URLError, TimeoutError):
+        return False
+
+
 def enviar_deteccao(placa: str, confianca_ocr: float,
                     caminho_imagem: str | None = None,
-                    id_camera: int | None = None) -> dict:
+                    id_camera: int | None = None,
+                    data_hora: datetime | None = None) -> dict:
     """Envia a placa lida para POST /deteccoes.
 
     `id_camera` permite sobrescrever a câmera configurada globalmente —
@@ -27,7 +49,7 @@ def enviar_deteccao(placa: str, confianca_ocr: float,
         "id_camera": id_camera if id_camera is not None else ID_CAMERA,
         "confianca_leitura": round(confianca_ocr * 100, 2),
         "imagem_captura": caminho_imagem,
-        "data_hora": datetime.now().isoformat(),
+        "data_hora": (data_hora or datetime.now()).isoformat(),
     }
     req = urllib.request.Request(
         f"{API_URL}/deteccoes",

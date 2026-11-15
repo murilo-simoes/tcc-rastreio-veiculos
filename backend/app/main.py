@@ -10,7 +10,8 @@ from app import models
 from app.database import Base, SessionLocal, engine
 from app.lgpd import purgar_imagens_expiradas
 from app.routers import (
-    alertas, auth_router, avistamentos, cameras, privacidade, rotas, veiculos,
+    alertas, auth_router, avistamentos, cameras, previews, privacidade, rotas,
+    veiculos,
 )
 
 SEGUNDOS_UM_DIA = 24 * 60 * 60
@@ -80,6 +81,7 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(veiculos.router)
 app.include_router(cameras.router)
+app.include_router(previews.router)
 app.include_router(avistamentos.router)
 app.include_router(alertas.router)
 app.include_router(rotas.router)
