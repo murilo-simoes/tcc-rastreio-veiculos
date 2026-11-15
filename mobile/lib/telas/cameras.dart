@@ -24,7 +24,7 @@ class _TelaCamerasState extends State<TelaCameras> {
   void initState() {
     super.initState();
     _carregarCameras();
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _atualizar());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _atualizar());
   }
 
   @override

@@ -19,6 +19,7 @@ class _TelaAlertasState extends State<TelaAlertas> {
   String? _erro;
   Timer? _timer;
   bool _atualizando = false;
+  bool _manual = false; // spinner só na atualização pedida pelo usuário
   bool _somenteNovos = false;
   int? _confirmandoId;
   final _fmt = DateFormat('dd/MM/yyyy, HH:mm');
@@ -27,7 +28,7 @@ class _TelaAlertasState extends State<TelaAlertas> {
   void initState() {
     super.initState();
     _carregar();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _carregar());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _carregar());
   }
 
   @override
@@ -36,9 +37,10 @@ class _TelaAlertasState extends State<TelaAlertas> {
     super.dispose();
   }
 
-  Future<void> _carregar() async {
+  Future<void> _carregar({bool manual = false}) async {
     if (_atualizando) return;
-    setState(() => _atualizando = true);
+    _atualizando = true;
+    if (manual) setState(() => _manual = true);
     try {
       final alertas = await ApiClient.instance.listarAlertas();
       if (!mounted) return;
@@ -49,7 +51,8 @@ class _TelaAlertasState extends State<TelaAlertas> {
     } catch (e) {
       if (mounted) setState(() => _erro = e.toString());
     } finally {
-      if (mounted) setState(() => _atualizando = false);
+      _atualizando = false;
+      if (mounted && _manual) setState(() => _manual = false);
     }
   }
 
@@ -293,9 +296,9 @@ class _TelaAlertasState extends State<TelaAlertas> {
                               setState(() => _somenteNovos = true),
                         ),
                         IconButton(
-                          onPressed: _atualizando ? null : _carregar,
+                          onPressed: _manual ? null : () => _carregar(manual: true),
                           tooltip: 'Atualizar alertas',
-                          icon: _atualizando
+                          icon: _manual
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
